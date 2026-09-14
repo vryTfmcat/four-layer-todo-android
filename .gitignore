@@ -1,0 +1,34 @@
+# macOS and editor state
+.DS_Store
+.idea/
+*.iml
+
+# Android local/build output
+**/.gradle/
+**/.kotlin/
+**/build/
+**/local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# JavaScript build output and dependencies
+**/node_modules/
+**/dist/
+**/dist-friend/
+*.tsbuildinfo
+
+# Generated distribution artifacts
+/发布包/
+*.zip
+
+# Private planning, research and local release notes — never publish these
+/原型/
+/同类应用/
+/RELEASE_SUMMARY.md
+/obsidian待办插件.md
+/发布总结.md
+/重复任务清理候选-*.md
+/项目速览.md
+/插件/four-layer-todo/发布素材/
