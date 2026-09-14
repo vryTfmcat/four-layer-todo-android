@@ -8,4 +8,4 @@ Obsidian 四层待办插件，以及使用本地 Obsidian Markdown 文件的 And
 - `安卓应用/`：Android 客户端源码。
 - `four-layer-todo-ui/`：网页界面原型源码。
 
-本仓库不包含个人 Obsidian 库、任务清单、原型资料、设备路径、构建产物或发布压缩包。
+`安卓应用/`从本地obsidian库中导入待办文件
