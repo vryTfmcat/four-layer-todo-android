@@ -11,7 +11,7 @@ object MarkdownTaskParser {
     fun parse(content: String, fileTitle: String): ParsedTask? {
         val match = frontmatterPattern.find(content) ?: return null
         val values = match.groupValues[1].lineSequence().mapNotNull { line ->
-            entryPattern.matchEntire(line)?.let { it.groupValues[1] to it.groupValues[2].trim() }
+            entryPattern.matchEntire(line)?.let { it.groupValues[1] to stripScalarComment(it.groupValues[2]) }
         }.toMap()
         if (values["fourLayerTodo"] != "true") return null
         val id = decodeString(values["id"]).orEmpty()
@@ -94,15 +94,63 @@ object MarkdownTaskParser {
         return candidates.singleOrNull()?.path
     }
 
+    // Managed fields are top-level scalars; unrelated nested YAML is left intact.
+    private fun stripScalarComment(value: String): String {
+        val raw = value.trim()
+        var quote = raw.firstOrNull()?.takeIf { it.code == 39 || it == '"' }
+        var index = if (quote == null) 0 else 1
+        while (index < raw.length) {
+            val character = raw[index]
+            if (quote == '"' && character.code == 92) { index += 2; continue }
+            if (quote?.code == 39 && character == quote && raw.getOrNull(index + 1) == quote) {
+                index += 2
+                continue
+            }
+            if (character == quote) quote = null
+            else if (quote == null && character == '#' && (index == 0 || raw[index - 1].isWhitespace())) {
+                return raw.substring(0, index).trim()
+            }
+            index++
+        }
+        return raw
+    }
+
     private fun decodeString(value: String?): String? {
         val raw = value?.trim() ?: return null
         if (raw == "null" || raw == "~" || raw.isBlank()) return null
-        if (raw.length >= 2 && raw.first() == '"' && raw.last() == '"') {
-            return raw.substring(1, raw.length - 1)
-                .replace("\\\"", "\"")
-                .replace("\\n", "\n")
-                .replace("\\\\", "\\")
+        if (raw.first() == '\'') {
+            if (raw.length < 2 || raw.last() != '\'') return null
+            return raw.substring(1, raw.length - 1).replace("''", "'")
         }
+        if (raw.first() == '"') {
+            if (raw.length < 2 || raw.last() != '"') return null
+            val inner = raw.substring(1, raw.length - 1)
+            val result = StringBuilder()
+            var index = 0
+            while (index < inner.length) {
+                val character = inner[index++]
+                if (character != '\\') { result.append(character); continue }
+                if (index >= inner.length) return null
+                when (val escape = inner[index++]) {
+                    '"', '\\', '/' -> result.append(escape)
+                    'n' -> result.append('\n')
+                    'r' -> result.append('\r')
+                    't' -> result.append('\t')
+                    'b' -> result.append('\b')
+                    'f' -> result.append('\u000C')
+                    'u' -> {
+                        if (index + 4 > inner.length) return null
+                        val code = inner.substring(index, index + 4).toIntOrNull(16) ?: return null
+                        result.append(code.toChar())
+                        index += 4
+                    }
+                    else -> return null
+                }
+            }
+            return result.toString()
+        }
+        // Block scalars and collections are not valid managed scalar IDs/priorities.
+        if (raw == "|" || raw == ">" || raw.startsWith("[") || raw.startsWith("{")) return null
         return raw
     }
 }
