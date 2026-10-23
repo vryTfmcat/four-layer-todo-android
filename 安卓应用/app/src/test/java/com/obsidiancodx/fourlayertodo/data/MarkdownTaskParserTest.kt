@@ -70,4 +70,37 @@ linkedNotePath: null
             )
         )
     }
+    @Test
+    fun parsesUserQuotedScalarsAndComments() {
+        val content = "\uFEFF" + """---
+fourLayerTodo: true # managed
+id: 'a''b # inside' # comment
+priority: 'P4'
+done: false # unfinished
+order: 42 # legacy order
+tags:
+  - a
+desc: |
+  第一行
+  第二行
+---
+正文"""
+        val task = MarkdownTaskParser.parse(content, "标题")
+        requireNotNull(task)
+        assertEquals("a'b # inside", task.id)
+        assertEquals("P4", task.priority)
+        assertEquals(false, task.done)
+        assertEquals(42L, task.sortKey)
+        assertEquals("正文", task.detail)
+    }
+
+    @Test
+    fun decodesJsonEscapesWithoutReinterpretingEscapedBackslashes() {
+        val content = """---
+fourLayerTodo: true
+id: "a\\n\u4e2d"
+---
+正文"""
+        assertEquals("a\\n中", MarkdownTaskParser.parse(content, "标题")?.id)
+    }
 }
